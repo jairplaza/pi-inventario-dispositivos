@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
 
 export class CreateDispositivoDto {
   @IsString()
@@ -19,4 +19,9 @@ export class CreateDispositivoDto {
   @IsBoolean()
   @IsOptional()
   disponible?: boolean;
+
+  @IsUUID()
+  @IsNotEmpty()
+  categoriaId: string;
 }
+

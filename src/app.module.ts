@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DispositivosModule } from './dispositivos/dispositivos.module';
+import { CategoriasModule } from './categorias/categorias.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -19,10 +21,12 @@ import { DispositivosModule } from './dispositivos/dispositivos.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: true,
+        synchronize: false,
       }),
     }),
     DispositivosModule,
+    CategoriasModule,
+    AuthModule,
   ],
   controllers: [],
   providers: [],

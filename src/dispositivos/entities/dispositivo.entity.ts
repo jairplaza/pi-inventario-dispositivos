@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Categoria } from '../../categorias/entities/categoria.entity';
 
 @Entity('dispositivos')
 export class Dispositivo {
@@ -16,6 +17,10 @@ export class Dispositivo {
 
   @Column({ type: 'boolean', default: true })
   disponible: boolean;
+
+  @ManyToOne(() => Categoria, (categoria: Categoria) => categoria.dispositivos, { eager: true, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'categoria_id' })
+  categoria: Categoria;
 
   @CreateDateColumn()
   createdAt: Date;

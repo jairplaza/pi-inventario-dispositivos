@@ -1,28 +1,78 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
+import { Dispositivo } from './entities/dispositivo.entity';
 import { CreateDispositivoDto } from './dto/create-dispositivo.dto';
 import { UpdateDispositivoDto } from './dto/update-dispositivo.dto';
-import { Dispositivo } from './entities/dispositivo.entity';
+import { PaginationQueryDto } from './dto/pagination-query.dto';
+import { Categoria } from '../categorias/entities/categoria.entity';
 
 @Injectable()
 export class DispositivosService {
   constructor(
     @InjectRepository(Dispositivo)
     private readonly dispositivoRepository: Repository<Dispositivo>,
+    @InjectRepository(Categoria)
+    private readonly categoriaRepository: Repository<Categoria>,
   ) {}
 
   async create(createDispositivoDto: CreateDispositivoDto) {
-    const dispositivo = this.dispositivoRepository.create(createDispositivoDto);
+    const { categoriaId, ...dispositivoData } = createDispositivoDto;
+
+    const categoria = await this.categoriaRepository.findOne({
+      where: { id: categoriaId },
+    });
+
+    if (!categoria) {
+      throw new NotFoundException(`Categoría con ID ${categoriaId} no encontrada`);
+    }
+
+    const dispositivo = this.dispositivoRepository.create({
+      ...dispositivoData,
+      categoria,
+    });
+
     return await this.dispositivoRepository.save(dispositivo);
   }
 
-  async findAll() {
-    return await this.dispositivoRepository.find();
+  async findAll(paginationQueryDto: PaginationQueryDto) {
+    const { page = 1, limit = 10, search, order = 'ASC' } = paginationQueryDto;
+    const skip = (page - 1) * limit;
+
+    // Construimos las condiciones de búsqueda si viene el parámetro 'search'
+    const where = search
+      ? [
+          { nombre: ILike(`%${search}%`) },
+          { tipo: ILike(`%${search}%`) },
+        ]
+      : undefined;
+
+    const [data, total] = await this.dispositivoRepository.findAndCount({
+      where,
+      relations: { categoria: true },
+      take: limit,
+      skip: skip,
+      order: {
+        nombre: order,
+      },
+    });
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        lastPage: Math.ceil(total / limit),
+        limit,
+      },
+    };
   }
 
   async findOne(id: string) {
-    const dispositivo = await this.dispositivoRepository.findOneBy({ id });
+    const dispositivo = await this.dispositivoRepository.findOne({
+      where: { id },
+      relations: { categoria: true },
+    });
     if (!dispositivo) {
       throw new NotFoundException(`Dispositivo con ID ${id} no encontrado`);
     }
@@ -30,8 +80,20 @@ export class DispositivosService {
   }
 
   async update(id: string, updateDispositivoDto: UpdateDispositivoDto) {
+    const { categoriaId, ...dispositivoData } = updateDispositivoDto;
     const dispositivo = await this.findOne(id);
-    this.dispositivoRepository.merge(dispositivo, updateDispositivoDto);
+
+    if (categoriaId) {
+      const categoria = await this.categoriaRepository.findOne({
+        where: { id: categoriaId },
+      });
+      if (!categoria) {
+        throw new NotFoundException(`Categoría con ID ${categoriaId} no encontrada`);
+      }
+      dispositivo.categoria = categoria;
+    }
+
+    this.dispositivoRepository.merge(dispositivo, dispositivoData);
     return await this.dispositivoRepository.save(dispositivo);
   }
 
